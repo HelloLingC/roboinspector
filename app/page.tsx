@@ -1,27 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PlaceholderRobot, RobotShowcase } from "../components/RobotShowcase";
-
-type Telemetry = {
-  imu?: {
-    accel?: { x: number; y: number; z: number };
-    gyro?: { x: number; y: number; z: number };
-    orientation?: { roll: number; pitch: number; yaw: number };
-  };
-  ts?: number;
-  fps?: number;
-};
-
-type DetectionBox = {
-  id?: string | number;
-  label?: string;
-  confidence?: number;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-};
+import { CameraSection } from "../components/CameraSection";
+import { ControlPanel } from "../components/ControlPanel";
+import { IntegrationNotes } from "../components/IntegrationNotes";
+import { SensorsPanel } from "../components/SensorsPanel";
+import { ShowcaseSection } from "../components/ShowcaseSection";
+import { StatusHeader } from "../components/StatusHeader";
+import {
+  DetectionBox,
+  DetectionStatus,
+  Telemetry,
+  WsStatus,
+} from "../types/robot";
 
 const MJPEG_URL =
   process.env.NEXT_PUBLIC_MJPEG_URL ?? "http://pi.local:8080/stream";
@@ -32,15 +23,11 @@ const DETECT_URL =
   process.env.NEXT_PUBLIC_DETECT_URL ?? "http://localhost:5000/detect";
 
 export default function Home() {
-  const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected">(
-    "disconnected",
-  );
+  const [wsStatus, setWsStatus] = useState<WsStatus>("disconnected");
   const [wsAlert, setWsAlert] = useState<string>("");
   const [telemetry, setTelemetry] = useState<Telemetry>({});
   const [lastMessage, setLastMessage] = useState<string>("");
-  const [detectionStatus, setDetectionStatus] = useState<
-    "idle" | "running" | "error"
-  >("idle");
+  const [detectionStatus, setDetectionStatus] = useState<DetectionStatus>("idle");
   const [detectionBoxes, setDetectionBoxes] = useState<DetectionBox[]>([]);
   const [controlFeedback, setControlFeedback] = useState<string>("");
   const wsRef = useRef<WebSocket | null>(null);
@@ -185,222 +172,38 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <header className="border-b border-zinc-800 bg-zinc-900/60 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-zinc-400">RoboInspector</p>
-            <h1 className="text-2xl font-semibold">Inspection Robot Control</h1>
-          </div>
-          <div className="flex items-center gap-3 text-sm">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                wsStatus === "connected"
-                  ? "bg-emerald-400"
-                  : wsStatus === "connecting"
-                    ? "bg-amber-400"
-                    : "bg-red-500"
-              }`}
-            />
-            <span className="text-zinc-300">WS: {wsStatus}</span>
-          </div>
-        </div>
-      </header>
+      <StatusHeader wsStatus={wsStatus} />
 
-      <main className="mx-auto grid max-w-6xl gap-6 px-6 py-6 lg:grid-cols-3">
-        <section className="lg:col-span-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-zinc-400">Live Video (MJPEG)</p>
-              <h2 className="text-lg font-semibold">Camera</h2>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-zinc-400">
-              <span>MJPEG:</span>
-              <code className="rounded bg-black/40 px-2 py-1">{MJPEG_URL}</code>
-            </div>
-          </div>
-          <div className="relative mt-3 overflow-hidden rounded-xl border border-zinc-800 bg-black">
-            <img
-              ref={imgRef}
-              src={MJPEG_URL}
-              alt="Robot camera feed"
-              className="block w-full"
-              crossOrigin="anonymous"
-              onLoad={() => {
-                // Trigger overlay redraw after dimensions settle.
-                setDetectionBoxes((prev) => [...prev]);
-              }}
-            />
-            <canvas
-              ref={canvasRef}
-              className="pointer-events-none absolute inset-0 h-full w-full"
-            />
-          </div>
-          <div className="mt-3 flex items-center gap-3">
-            <button
-              onClick={runDetection}
-              disabled={!canDetect || detectionStatus === "running"}
-              className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-medium text-black disabled:cursor-not-allowed disabled:bg-emerald-500/50"
-            >
-              {detectionStatus === "running" ? "Detecting..." : "Run People Detection"}
-            </button>
-            {!canDetect && (
-              <p className="text-xs text-amber-300">
-                Set NEXT_PUBLIC_DETECT_URL to enable detection.
-              </p>
-            )}
-            {detectionStatus === "error" && (
-              <p className="text-xs text-red-400">Detection errored. Check detector service.</p>
-            )}
-          </div>
+      <main className="mx-auto max-w-7xl space-y-6 px-6 py-6">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,1fr)]">
+          <ControlPanel
+            wsUrl={WS_URL}
+            wsAlert={wsAlert}
+            controlFeedback={controlFeedback}
+            lastMessage={lastMessage}
+            onDrive={handleDrive}
+            onStop={handleStop}
+            onPing={() => sendCommand({ type: "ping" })}
+          />
+          <CameraSection
+            mjpegUrl={MJPEG_URL}
+            detectionStatus={detectionStatus}
+            canDetect={canDetect}
+            imgRef={imgRef}
+            canvasRef={canvasRef}
+            onRunDetection={runDetection}
+            onImageLoad={() => {
+              // Trigger overlay redraw after dimensions settle.
+              setDetectionBoxes((prev) => [...prev]);
+            }}
+          />
+          <SensorsPanel telemetry={telemetry} />
         </section>
-
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-zinc-400">Control</p>
-              <h2 className="text-lg font-semibold">Drive</h2>
-            </div>
-            <code className="rounded bg-black/40 px-2 py-1 text-xs text-zinc-400">
-              {WS_URL}
-            </code>
-          </div>
-          {wsAlert && (
-            <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-              {wsAlert}
-            </p>
-          )}
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <button
-              onClick={() => handleDrive(1, 0)}
-              className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
-            >
-              Forward
-            </button>
-            <button
-              onClick={() => handleDrive(-1, 0)}
-              className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
-            >
-              Reverse
-            </button>
-            <button
-              onClick={handleStop}
-              className="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-black hover:bg-red-400"
-            >
-              Stop
-            </button>
-            <button
-              onClick={() => handleDrive(0.5, -1)}
-              className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
-            >
-              Left
-            </button>
-            <button
-              onClick={() => handleDrive(0.5, 1)}
-              className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
-            >
-              Right
-            </button>
-            <button
-              onClick={() => sendCommand({ type: "ping" })}
-              className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
-            >
-              Ping
-            </button>
-          </div>
-          {controlFeedback && (
-            <p className="mt-3 text-xs text-zinc-400">Status: {controlFeedback}</p>
-          )}
-          {lastMessage && (
-            <p className="mt-1 text-xs text-zinc-500">Last message: {lastMessage}</p>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-zinc-400">Sensors</p>
-              <h2 className="text-lg font-semibold">IMU / Status</h2>
-            </div>
-            {telemetry.ts && (
-              <p className="text-xs text-zinc-500">
-                Updated {Math.round((Date.now() - telemetry.ts) / 1000)}s ago
-              </p>
-            )}
-          </div>
-          <div className="mt-3 space-y-2 text-sm text-zinc-200">
-            <div className="flex justify-between">
-              <span>Accel</span>
-              <span className="text-zinc-400">
-                {telemetry.imu?.accel
-                  ? `${telemetry.imu.accel.x?.toFixed(2)}, ${telemetry.imu.accel.y?.toFixed(2)}, ${telemetry.imu.accel.z?.toFixed(2)}`
-                  : "—"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Gyro</span>
-              <span className="text-zinc-400">
-                {telemetry.imu?.gyro
-                  ? `${telemetry.imu.gyro.x?.toFixed(2)}, ${telemetry.imu.gyro.y?.toFixed(2)}, ${telemetry.imu.gyro.z?.toFixed(2)}`
-                  : "—"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Orientation</span>
-              <span className="text-zinc-400">
-                {telemetry.imu?.orientation
-                  ? `${telemetry.imu.orientation.roll?.toFixed(1)} / ${telemetry.imu.orientation.pitch?.toFixed(1)} / ${telemetry.imu.orientation.yaw?.toFixed(1)}`
-                  : "—"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>FPS</span>
-              <span className="text-zinc-400">{telemetry.fps ?? "—"}</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="lg:col-span-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-zinc-400">Integration Notes</p>
-              <h2 className="text-lg font-semibold">Wire up your endpoints</h2>
-            </div>
-          </div>
-          <div className="mt-3 grid gap-3 text-sm text-zinc-200 md:grid-cols-2">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-              <p className="font-medium text-zinc-100">Env variables</p>
-              <ul className="mt-2 space-y-1 text-zinc-400">
-                <li>`NEXT_PUBLIC_MJPEG_URL` — MJPEG stream URL from Pi.</li>
-                <li>`NEXT_PUBLIC_PI_WS` — WebSocket endpoint for control/telemetry.</li>
-                <li>`NEXT_PUBLIC_DETECT_URL` — Local detector endpoint (optional).</li>
-              </ul>
-            </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-              <p className="font-medium text-zinc-100">Expected payloads</p>
-              <ul className="mt-2 space-y-1 text-zinc-400">
-                <li>Drive: {"{ type: \"drive\", throttle: -1..1, steer: -1..1 }"}</li>
-                <li>Stop: {"{ type: \"stop\" }"}</li>
-                <li>Telemetry message should include `telemetry` with IMU/FPS fields.</li>
-                <li>Detector returns {"{ boxes: [{x1,y1,x2,y2,label?,confidence?}] }"} normalized 0-1.</li>
-              </ul>
-            </div>
-          </div>
+        <section className="grid gap-6 lg:grid-cols-2">
+          <ShowcaseSection />
+          <IntegrationNotes />
         </section>
       </main>
-      <section className="mx-auto mb-8 mt-2 grid max-w-6xl gap-6 px-6 lg:grid-cols-3">
-        <div className="lg:col-span-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-zinc-400">3D Model Showcase</p>
-              <h2 className="text-lg font-semibold">Robot Car Visualization</h2>
-              <p className="text-xs text-zinc-500">Inspect the robot in 3D.</p>
-            </div>
-          </div>
-          <div className="mt-3">
-            <RobotShowcase />
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
