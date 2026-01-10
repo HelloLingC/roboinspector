@@ -34,19 +34,21 @@ export function CameraSection({
           <code className="rounded bg-black/40 px-2 py-1">{mjpegUrl}</code>
         </div>
       </div>
-      <div className="relative mt-3 overflow-hidden rounded-xl border border-zinc-800 bg-black">
-        <img
-          ref={imgRef}
-          src={mjpegUrl}
-          alt="Robot camera feed"
-          className="block w-full"
-          crossOrigin="anonymous"
-          onLoad={onImageLoad}
-        />
-        <canvas
-          ref={canvasRef}
-          className="pointer-events-none absolute inset-0 h-full w-full"
-        />
+      <div className="mt-3 flex justify-center">
+        <div className="relative aspect-[4/3] w-full max-w-md overflow-hidden rounded-xl border border-zinc-800 bg-black">
+          <img
+            ref={imgRef}
+            src={mjpegUrl}
+            alt="Robot camera feed"
+            className="h-full w-full object-contain"
+            crossOrigin="anonymous"
+            onLoad={onImageLoad}
+          />
+          <canvas
+            ref={canvasRef}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          />
+        </div>
       </div>
       <div className="mt-3 flex items-center gap-3">
         <button
