@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CameraSection } from "../components/CameraSection";
 import { ControlPanel } from "../components/ControlPanel";
+import { AuthenticationDialog, AuthCredentials } from "../components/AuthenticationDialog";
 import { IntegrationNotes } from "../components/IntegrationNotes";
+import { ActivityLogPanel } from "../components/ActivityLogPanel";
 import { SensorsPanel } from "../components/SensorsPanel";
 import { ShowcaseSection } from "../components/ShowcaseSection";
 import { StatusHeader } from "../components/StatusHeader";
+import { RobotWebSocketClient } from "@/lib/robotWebSocketClient";
 import {
   DetectionBox,
   DetectionStatus,
+  ActivityLogEntry,
   Telemetry,
   WsStatus,
 } from "../types/robot";
@@ -21,6 +25,9 @@ const WS_URL = process.env.NEXT_PUBLIC_PI_WS ?? "ws://pi.local:9000/ws";
 console.log("MJPEG_URL", MJPEG_URL);
 const DETECT_URL =
   process.env.NEXT_PUBLIC_DETECT_URL ?? "http://localhost:5000/detect";
+const AUTH_SESSION_STORAGE_KEY = "roboinspector:dashboard-auth";
+const DEMO_ACCESS_CODE =
+  process.env.NEXT_PUBLIC_DASHBOARD_PASSCODE ?? "ROBO-ACCESS";
 
 export default function Home() {
   const [wsStatus, setWsStatus] = useState<WsStatus>("disconnected");
@@ -30,61 +37,94 @@ export default function Home() {
   const [detectionStatus, setDetectionStatus] = useState<DetectionStatus>("idle");
   const [detectionBoxes, setDetectionBoxes] = useState<DetectionBox[]>([]);
   const [controlFeedback, setControlFeedback] = useState<string>("");
-  const wsRef = useRef<WebSocket | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const clientRef = useRef<RobotWebSocketClient | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const canDetect = useMemo(() => Boolean(DETECT_URL), []);
 
-  useEffect(() => {
-    if (!WS_URL) {
-      setWsStatus("disconnected");
-      setWsAlert(
-        "WebSocket URL is missing. Commands will attempt HTTP fallback if available.",
-      );
-      return;
-    }
-    setWsStatus("connecting");
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
+  const pushLog = useCallback((entry: Omit<ActivityLogEntry, "id">) => {
+    setActivityLog((prev) => {
+      const newEntry: ActivityLogEntry = {
+        ...entry,
+        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      };
+      return [newEntry, ...prev].slice(0, 40);
+    });
+  }, []);
 
-    ws.onopen = () => {
-      setWsStatus("connected");
-      setWsAlert("");
-    };
-    ws.onclose = () => {
-      setWsStatus("disconnected");
-      setWsAlert(
-        "WebSocket disconnected. Commands will use HTTP fallback; check the WS server.",
-      );
-    };
-    ws.onerror = () => {
-      setWsStatus("disconnected");
-      setWsAlert(
-        "WebSocket connection failed. Using HTTP fallback; verify NEXT_PUBLIC_PI_WS.",
-      );
-      console.warn("WebSocket connection error, falling back to HTTP if possible.");
-    };
-    ws.onmessage = (event) => {
-      setLastMessage(event.data);
-      try {
-        const parsed = JSON.parse(event.data);
-        if (parsed.telemetry) {
-          setTelemetry({
-            ...parsed.telemetry,
-            ts: Date.now(),
-          });
+  const handleAuthenticate = useCallback(
+    async ({ email, accessCode }: AuthCredentials) => {
+      setAuthSubmitting(true);
+      setAuthError("");
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const isMatch =
+        accessCode.trim().toUpperCase() === DEMO_ACCESS_CODE.toUpperCase();
+      if (isMatch) {
+        setIsUnlocked(true);
+        try {
+          window.sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, "granted");
+        } catch {
+          // Ignore storage errors in private mode.
         }
-      } catch {
-        // Non-JSON message; keep lastMessage only.
+        pushLog({
+          ts: Date.now(),
+          scope: "session",
+          level: "success",
+          title: "Dashboard unlocked",
+          detail: email ? `Authenticated as ${email}` : "Authenticated as guest",
+        });
+        setAuthSubmitting(false);
+        return;
       }
-    };
+      setAuthError(`Code mismatch. Use "${DEMO_ACCESS_CODE}" for this demo.`);
+      setAuthSubmitting(false);
+    },
+    [pushLog],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+      if (stored === "granted") {
+        setIsUnlocked(true);
+      }
+    } catch {
+      // Ignore storage errors (e.g., disabled cookies).
+    } finally {
+      setAuthChecked(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isUnlocked) return;
+    const client = new RobotWebSocketClient({
+      wsUrl: WS_URL,
+      handlers: {
+        onStatusChange: (status, alert) => {
+          setWsStatus(status);
+          setWsAlert(alert ?? "");
+        },
+        onMessage: (message) => setLastMessage(message),
+        onTelemetry: (nextTelemetry) => setTelemetry(nextTelemetry),
+        onLog: pushLog,
+      },
+    });
+
+    client.connect();
+    clientRef.current = client;
 
     return () => {
-      ws.close();
-      wsRef.current = null;
+      client.disconnect();
+      clientRef.current = null;
     };
-  }, []);
+  }, [pushLog, isUnlocked]);
 
   useEffect(() => {
     const img = imgRef.current;
@@ -125,24 +165,27 @@ export default function Home() {
     draw();
   }, [detectionBoxes]);
 
-  const sendCommand = async (payload: Record<string, unknown>) => {
-    const json = JSON.stringify(payload);
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(json);
-      setControlFeedback("Sent via WebSocket");
-      return;
-    }
-    try {
-      await fetch(WS_URL.replace("ws", "http"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: json,
-      });
-      setControlFeedback("Sent via HTTP fallback");
-    } catch (err) {
-      setControlFeedback(`Send failed: ${(err as Error).message}`);
-    }
-  };
+  const sendCommand = useCallback(
+    async (payload: Record<string, unknown>) => {
+      if (!isUnlocked) {
+        setControlFeedback("Authenticate to control the robot.");
+        return;
+      }
+      if (!clientRef.current) {
+        setControlFeedback("Send failed: WebSocket client unavailable");
+        return;
+      }
+      try {
+        const transport = await clientRef.current.send(payload);
+        setControlFeedback(
+          transport === "ws" ? "Sent via WebSocket" : "Sent via HTTP fallback",
+        );
+      } catch (err) {
+        setControlFeedback(`Send failed: ${(err as Error).message}`);
+      }
+    },
+    [isUnlocked],
+  );
 
   const handleDrive = (throttle: number, steer: number) => {
     sendCommand({ type: "drive", throttle, steer });
@@ -153,7 +196,18 @@ export default function Home() {
   };
 
   const runDetection = async () => {
+    if (!isUnlocked) {
+      setControlFeedback("Authenticate before running detection.");
+      return;
+    }
     if (!canDetect) return;
+    pushLog({
+      ts: Date.now(),
+      scope: "detection",
+      level: "info",
+      title: "Detection requested",
+      detail: "Processing the current frame.",
+    });
     setDetectionStatus("running");
     try {
       const res = await fetch(DETECT_URL, {
@@ -162,19 +216,43 @@ export default function Home() {
         body: JSON.stringify({ frameUrl: MJPEG_URL }),
       });
       const data = await res.json();
-      setDetectionBoxes(data?.boxes ?? []);
+      const boxes: DetectionBox[] = data?.boxes ?? [];
+      setDetectionBoxes(boxes);
       setDetectionStatus("idle");
+      pushLog({
+        ts: Date.now(),
+        scope: "detection",
+        level: "success",
+        title: "Detection complete",
+        detail: boxes.length
+          ? `${boxes.length} detection${boxes.length === 1 ? "" : "s"} reported.`
+          : "No detections reported.",
+      });
     } catch (err) {
       setDetectionStatus("error");
       setControlFeedback(`Detection failed: ${(err as Error).message}`);
+      pushLog({
+        ts: Date.now(),
+        scope: "detection",
+        level: "error",
+        title: "Detection failed",
+        detail: (err as Error).message,
+      });
     }
   };
 
+  const showAuthGate = !authChecked || !isUnlocked;
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <StatusHeader wsStatus={wsStatus} />
+      {/* <StatusHeader wsStatus={wsStatus} /> */}
 
-      <main className="mx-auto max-w-7xl space-y-6 px-6 py-6">
+      <main
+        className={`mx-auto max-w-7xl space-y-6 px-6 py-6 ${
+          showAuthGate ? "pointer-events-none blur-sm" : ""
+        }`}
+        aria-hidden={showAuthGate}
+      >
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,1fr)]">
           <ControlPanel
             wsUrl={WS_URL}
@@ -201,9 +279,18 @@ export default function Home() {
         </section>
         <section className="grid gap-6 lg:grid-cols-2">
           <ShowcaseSection />
-          <IntegrationNotes />
+          <ActivityLogPanel entries={activityLog} />
+          {/* <IntegrationNotes /> */}
         </section>
+        
       </main>
+      <AuthenticationDialog
+        open={showAuthGate}
+        isSubmitting={authSubmitting}
+        errorMessage={authError}
+        expectedCodeHint={DEMO_ACCESS_CODE}
+        onSubmit={handleAuthenticate}
+      />
     </div>
   );
 }

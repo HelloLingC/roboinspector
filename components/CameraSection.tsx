@@ -26,7 +26,7 @@ export function CameraSection({
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Live Video (MJPEG)</p>
+          <p className="text-sm text-zinc-400">Live Stream</p>
           <h2 className="text-lg font-semibold">Camera</h2>
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-400">
@@ -51,13 +51,6 @@ export function CameraSection({
         </div>
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <button
-          onClick={onRunDetection}
-          disabled={!canDetect || detectionStatus === "running"}
-          className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-medium text-black disabled:cursor-not-allowed disabled:bg-emerald-500/50"
-        >
-          {detectionStatus === "running" ? "Detecting..." : "Run People Detection"}
-        </button>
         {!canDetect && (
           <p className="text-xs text-amber-300">
             Set NEXT_PUBLIC_DETECT_URL to enable detection.

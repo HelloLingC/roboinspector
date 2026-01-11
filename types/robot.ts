@@ -20,3 +20,14 @@ export type DetectionBox = {
 
 export type DetectionStatus = "idle" | "running" | "error";
 export type WsStatus = "disconnected" | "connecting" | "connected";
+
+export type ActivityScope = "detection" | "session" | "system";
+
+export type ActivityLogEntry = {
+  id: string;
+  ts: number;
+  scope: ActivityScope;
+  level: "info" | "success" | "error";
+  title: string;
+  detail?: string;
+};

@@ -79,6 +79,12 @@ export function ControlPanel({
       {lastMessage && (
         <p className="mt-1 text-xs text-zinc-500">Last message: {lastMessage}</p>
       )}
+
+      <button
+          className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-medium text-black disabled:cursor-not-allowed disabled:bg-emerald-500/50"
+        >
+          IDK
+        </button>
     </section>
   );
 }
