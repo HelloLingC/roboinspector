@@ -1,9 +1,11 @@
 "use client";
 
+import { useRef } from "react";
 import { ActivityLogEntry } from "@/types/robot";
 
 type ActivityLogPanelProps = {
   entries: ActivityLogEntry[];
+  setEntries: (entries: ActivityLogEntry[]) => void;
   maxItems?: number;
 };
 
@@ -26,8 +28,40 @@ function relativeTime(ts: number) {
   return `${days}d ago`;
 }
 
-export function ActivityLogPanel({ entries, maxItems = 20 }: ActivityLogPanelProps) {
+export function ActivityLogPanel({ entries, setEntries, maxItems = 20 }: ActivityLogPanelProps) {
   const visibleEntries = entries.slice(0, maxItems);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const json = JSON.stringify(entries, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `activity-log-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const result = event.target?.result;
+        if (typeof result !== "string") return;
+        const data = JSON.parse(result);
+        if (Array.isArray(data)) {
+          setEntries(data as ActivityLogEntry[]);
+        }
+      } catch (err) {
+        console.error("Failed to parse activity log JSON:", err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   return (
     <section className="h-full rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
@@ -37,9 +71,28 @@ export function ActivityLogPanel({ entries, maxItems = 20 }: ActivityLogPanelPro
           <h2 className="text-lg font-semibold">Activity Log</h2>
           <p className="text-xs text-zinc-500">Detections & session status</p>
         </div>
-        <span className="text-xs text-zinc-500">
-          {visibleEntries.length ? "Live" : "No entries yet"}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            disabled={!entries.length}
+            className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Export
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 transition hover:bg-zinc-700"
+          >
+            Import
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            className="hidden"
+          />
+        </div>
       </div>
       <ul className="mt-4 space-y-3 text-sm">
         {visibleEntries.length ? (
@@ -66,7 +119,7 @@ export function ActivityLogPanel({ entries, maxItems = 20 }: ActivityLogPanelPro
           ))
         ) : (
           <li className="rounded-xl border border-dashed border-zinc-800/60 bg-zinc-950/20 p-6 text-center text-sm text-zinc-500">
-            Start a detection run or reconnect the robot to see entries here.
+            Empty activity log...
           </li>
         )}
       </ul>

@@ -18,14 +18,13 @@ export type DetectionBox = {
   y2: number;
 };
 
-export type DetectionStatus = "idle" | "running" | "error";
 export type WsStatus = "disconnected" | "connecting" | "connected";
 
 export type ActivityScope = "detection" | "session" | "system";
 
 export type ActivityLogEntry = {
   id: string;
-  ts: number;
+  ts: number; /** time */
   scope: ActivityScope;
   level: "info" | "success" | "error";
   title: string;

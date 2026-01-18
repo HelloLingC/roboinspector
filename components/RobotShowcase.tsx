@@ -158,7 +158,7 @@ export function PlaceholderRobot({ wireframe, cinematicMode, sensorPulse }: Plac
 
 export function RobotShowcase({ className }: RobotShowcaseProps) {
   const [autoRotate, setAutoRotate] = useState(false);
-  const [wireframe, setWireframe] = useState(false);
+  const [wireframe, setWireframe] = useState(true);
   const [envPreset, setEnvPreset] = useState<"city" | "sunset" | "studio">("city");
   const [cinematicMode, setCinematicMode] = useState(true);
   const [sensorPulse, setSensorPulse] = useState(true);
@@ -245,25 +245,22 @@ export function RobotShowcase({ className }: RobotShowcaseProps) {
         </button>
         <button
           onClick={() => setEnvPreset("city")}
-          className={`rounded-lg border px-3 py-2 font-medium ${
-            envPreset === "city" ? "border-emerald-500 text-emerald-400" : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800"
-          }`}
+          className={`rounded-lg border px-3 py-2 font-medium ${envPreset === "city" ? "border-emerald-500 text-emerald-400" : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800"
+            }`}
         >
           City
         </button>
         <button
           onClick={() => setEnvPreset("sunset")}
-          className={`rounded-lg border px-3 py-2 font-medium ${
-            envPreset === "sunset" ? "border-emerald-500 text-emerald-400" : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800"
-          }`}
+          className={`rounded-lg border px-3 py-2 font-medium ${envPreset === "sunset" ? "border-emerald-500 text-emerald-400" : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800"
+            }`}
         >
           Sunset
         </button>
         <button
           onClick={() => setEnvPreset("studio")}
-          className={`rounded-lg border px-3 py-2 font-medium ${
-            envPreset === "studio" ? "border-emerald-500 text-emerald-400" : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800"
-          }`}
+          className={`rounded-lg border px-3 py-2 font-medium ${envPreset === "studio" ? "border-emerald-500 text-emerald-400" : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800"
+            }`}
         >
           Studio
         </button>

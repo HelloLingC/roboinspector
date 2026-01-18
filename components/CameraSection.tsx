@@ -1,25 +1,18 @@
 "use client";
 
 import { MutableRefObject } from "react";
-import { DetectionStatus } from "../types/robot";
 
 type CameraSectionProps = {
   mjpegUrl: string;
-  detectionStatus: DetectionStatus;
   canDetect: boolean;
   imgRef: MutableRefObject<HTMLImageElement | null>;
-  canvasRef: MutableRefObject<HTMLCanvasElement | null>;
-  onRunDetection: () => void;
   onImageLoad: () => void;
 };
 
 export function CameraSection({
   mjpegUrl,
-  detectionStatus,
   canDetect,
   imgRef,
-  canvasRef,
-  onRunDetection,
   onImageLoad,
 }: CameraSectionProps) {
   return (
@@ -36,6 +29,9 @@ export function CameraSection({
       </div>
       <div className="mt-3 flex justify-center">
         <div className="relative aspect-[4/3] w-full max-w-md overflow-hidden rounded-xl border border-zinc-800 bg-black">
+          <video autoPlay muted loop playsInline suppressHydrationWarning>
+            <source src="demo.mp4" type="video/mp4" />
+          </video>
           <img
             ref={imgRef}
             src={mjpegUrl}
@@ -44,10 +40,6 @@ export function CameraSection({
             crossOrigin="anonymous"
             onLoad={onImageLoad}
           />
-          <canvas
-            ref={canvasRef}
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          />
         </div>
       </div>
       <div className="mt-3 flex items-center gap-3">
@@ -55,9 +47,6 @@ export function CameraSection({
           <p className="text-xs text-amber-300">
             Set NEXT_PUBLIC_DETECT_URL to enable detection.
           </p>
-        )}
-        {detectionStatus === "error" && (
-          <p className="text-xs text-red-400">Detection errored. Check detector service.</p>
         )}
       </div>
     </section>

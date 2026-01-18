@@ -41,13 +41,13 @@ export function AuthenticationDialog({
       <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900/90 p-8 shadow-2xl">
         <div className="space-y-2 text-center">
           <p className="text-xs uppercase tracking-[0.3em] text-emerald-400">Access Required</p>
-          <h1 className="text-2xl font-semibold">Authenticate to enter</h1>
+          <h1 className="text-2xl font-semibold">身份验证</h1>
           <p className="text-sm text-zinc-400">{helperText}</p>
         </div>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <div className="space-y-1">
             <label htmlFor={emailInputId} className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Operator email
+              操作员账号
             </label>
             <input
               id={emailInputId}
@@ -61,7 +61,7 @@ export function AuthenticationDialog({
           </div>
           <div className="space-y-1">
             <label htmlFor={codeInputId} className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Access code
+              访问令牌
             </label>
             <input
               id={codeInputId}
@@ -87,7 +87,7 @@ export function AuthenticationDialog({
             className="flex w-full items-center justify-center rounded-2xl bg-emerald-500/90 px-4 py-3 text-sm font-semibold uppercase tracking-widest text-emerald-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-700/50"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Validating…" : "Unlock dashboard"}
+            {isSubmitting ? "验证中…" : "确定"}
           </button>
         </form>
       </div>
