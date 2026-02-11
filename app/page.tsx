@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CameraSection } from "../components/CameraSection";
 import { ControlPanel } from "../components/ControlPanel";

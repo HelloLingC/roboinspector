@@ -30,3 +30,25 @@ export type ActivityLogEntry = {
   title: string;
   detail?: string;
 };
+
+export type DetectionPersonRecord = {
+  id: number;
+  detectionId: number;
+  trackId: number | null;
+  confidence: number;
+  bboxX1: number;
+  bboxY1: number;
+  bboxX2: number;
+  bboxY2: number;
+  createdAt: string;
+};
+
+export type DetectionRecord = {
+  id: number;
+  timestamp: string;
+  totalCount: number;
+  frameWidth: number | null;
+  frameHeight: number | null;
+  createdAt: string;
+  persons: DetectionPersonRecord[];
+};

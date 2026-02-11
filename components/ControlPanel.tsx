@@ -74,7 +74,6 @@ export function ControlPanel({
   onTelemetryChange,
   onLog,
 }: ControlPanelProps) {
-  const [wsAlert, setWsAlert] = useState<string>("");
   const [lastMessage, setLastMessage] = useState<string>("");
   const [controlFeedback, setControlFeedback] = useState<string>("");
   const [movementState, setMovementState] = useState<MovementState>("idle");
@@ -88,9 +87,6 @@ export function ControlPanel({
     const client = new RobotWebSocketClient({
       wsUrl: WS_URL,
       handlers: {
-        onStatusChange: (_status, alert) => {
-          setWsAlert(alert ?? "");
-        },
         onMessage: (message) => setLastMessage(message),
         onTelemetry: (nextTelemetry) => onTelemetryChange(nextTelemetry),
         onLog,
@@ -180,11 +176,6 @@ export function ControlPanel({
           {WS_URL}
         </code>
       </div>
-      {wsAlert && (
-        <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          {wsAlert}
-        </p>
-      )}
       <div className="mt-3 rounded-xl border border-zinc-800/70 bg-zinc-950/55 p-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
           Movement status
