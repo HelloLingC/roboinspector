@@ -27,13 +27,13 @@ export function CameraSection({
           <code className="rounded bg-black/40 px-2 py-1">{mjpegUrl}</code>
         </div>
       </div>
-      <div className="mt-3 flex justify-center">
-        <div className="relative aspect-[4/3] w-full max-w-md overflow-hidden rounded-xl border border-zinc-800 bg-black">
+      <div className="mt-3">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-zinc-800 bg-black">
           <img
             ref={imgRef}
             src={mjpegUrl}
             alt="Robot camera feed"
-            className="h-full w-full object-contain"
+            className="h-full w-full object-cover"
             crossOrigin="anonymous"
             onLoad={onImageLoad}
           />
