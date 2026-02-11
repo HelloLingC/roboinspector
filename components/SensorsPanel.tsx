@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Telemetry } from "@/types/robot";
 
 type SensorsPanelProps = {
@@ -8,6 +8,9 @@ type SensorsPanelProps = {
 };
 
 const NO_DATA = "No data";
+const LOAD_HISTORY_POINTS = 32;
+const LOAD_CHART_WIDTH = 420;
+const LOAD_CHART_HEIGHT = 120;
 
 function hasTelemetrySignal(telemetry: Telemetry) {
   return (
@@ -65,6 +68,69 @@ function formatOrientation(
 ) {
   if (!orientation) return NO_DATA;
   return `R ${formatNumber(orientation.roll, 1)}°  P ${formatNumber(orientation.pitch, 1)}°  Y ${formatNumber(orientation.yaw, 1)}°`;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getTelemetryMotionLoad(telemetry: Telemetry) {
+  const gyro = telemetry.imu?.gyro;
+  const accel = telemetry.imu?.accel;
+  const gyroMagnitude = gyro ? Math.hypot(gyro.x, gyro.y, gyro.z) : 0;
+  const accelMagnitude = accel ? Math.hypot(accel.x, accel.y, accel.z) : 9.81;
+  const accelDelta = Math.abs(accelMagnitude - 9.81);
+  return clamp(gyroMagnitude * 3.3 + accelDelta * 20, 0, 24);
+}
+
+function buildSimulatedLoad(nowMs: number, telemetry: Telemetry) {
+  const t = nowMs / 1000;
+  const wave =
+    Math.sin(t * 0.58) * 10 +
+    Math.sin(t * 1.35 + 0.9) * 7 +
+    Math.cos(t * 0.2 + 1.4) * 8;
+  const jitter = Math.sin(t * 3.2) * 1.8;
+  const motion = getTelemetryMotionLoad(telemetry);
+  const fpsPressure =
+    typeof telemetry.fps === "number" && Number.isFinite(telemetry.fps)
+      ? clamp((33 - telemetry.fps) * 2.1, -6, 14)
+      : 0;
+  return clamp(48 + wave + jitter + motion + fpsPressure, 9, 97);
+}
+
+function buildLinePath(
+  points: number[],
+  width: number,
+  height: number,
+  inset = 8,
+) {
+  if (!points.length) return "";
+  const innerWidth = width - inset * 2;
+  const innerHeight = height - inset * 2;
+  const stepX = points.length > 1 ? innerWidth / (points.length - 1) : 0;
+
+  return points
+    .map((point, index) => {
+      const x = inset + index * stepX;
+      const y = inset + ((100 - point) / 100) * innerHeight;
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function buildAreaPath(
+  points: number[],
+  width: number,
+  height: number,
+  inset = 8,
+) {
+  if (!points.length) return "";
+  const linePath = buildLinePath(points, width, height, inset);
+  const innerWidth = width - inset * 2;
+  const stepX = points.length > 1 ? innerWidth / (points.length - 1) : 0;
+  const lastX = inset + stepX * (points.length - 1);
+  const baseY = height - inset;
+  return `${linePath} L ${lastX.toFixed(2)} ${baseY.toFixed(2)} L ${inset.toFixed(2)} ${baseY.toFixed(2)} Z`;
 }
 
 function getFreshness(seconds: number | null) {
@@ -126,7 +192,7 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setNowMs(Date.now());
-    }, 1000);
+    }, 800);
 
     return () => {
       window.clearInterval(intervalId);
@@ -146,6 +212,32 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
     typeof displayTelemetry.fps === "number" && Number.isFinite(displayTelemetry.fps)
       ? displayTelemetry.fps.toFixed(1)
       : "--";
+  const loadHistory = useMemo(() => {
+    return Array.from({ length: LOAD_HISTORY_POINTS }, (_, index) => {
+      const offset = (LOAD_HISTORY_POINTS - 1 - index) * 850;
+      return buildSimulatedLoad(nowMs - offset, displayTelemetry);
+    });
+  }, [displayTelemetry, nowMs]);
+  const currentLoad = Math.round(loadHistory[loadHistory.length - 1] ?? 0);
+  const avgLoad =
+    loadHistory.length > 0
+      ? Math.round(
+          loadHistory.reduce((total, point) => total + point, 0) /
+            loadHistory.length,
+        )
+      : 0;
+  const peakLoad =
+    loadHistory.length > 0 ? Math.round(Math.max(...loadHistory)) : 0;
+  const loadLinePath = buildLinePath(
+    loadHistory,
+    LOAD_CHART_WIDTH,
+    LOAD_CHART_HEIGHT,
+  );
+  const loadAreaPath = buildAreaPath(
+    loadHistory,
+    LOAD_CHART_WIDTH,
+    LOAD_CHART_HEIGHT,
+  );
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900/90 via-zinc-900/70 to-zinc-950/85 p-4 shadow-xl shadow-black/30 backdrop-blur">
@@ -206,13 +298,94 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
                 ? "Waiting for telemetry"
                 : "Telemetry active"}
           </p>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            {isSimulated
-              ? "Auto-generated demo feed"
-              : updatedSeconds === null
-                ? "No timestamp yet"
-                : `Last packet ${updatedSeconds}s ago`}
+        </div>
+      </div>
+
+      <div className="relative mt-3 overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-sky-500/5 to-zinc-950/50 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-cyan-200/80">
+            System load simulation
           </p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2 py-0.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,0.8)]" />
+            <span className="font-mono text-[11px] text-cyan-100">
+              {currentLoad}%
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-2 overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950/50">
+          <svg
+            viewBox={`0 0 ${LOAD_CHART_WIDTH} ${LOAD_CHART_HEIGHT}`}
+            className="h-28 w-full"
+            role="img"
+            aria-label="Simulated system load trend"
+          >
+            <defs>
+              <linearGradient id="loadAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(34, 211, 238, 0.55)" />
+                <stop offset="70%" stopColor="rgba(34, 211, 238, 0.14)" />
+                <stop offset="100%" stopColor="rgba(34, 211, 238, 0)" />
+              </linearGradient>
+              <linearGradient id="loadLineGradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="rgba(56, 189, 248, 0.8)" />
+                <stop offset="50%" stopColor="rgba(103, 232, 249, 1)" />
+                <stop offset="100%" stopColor="rgba(34, 197, 94, 0.9)" />
+              </linearGradient>
+            </defs>
+
+            {[20, 40, 60, 80].map((level) => {
+              const y = 8 + ((100 - level) / 100) * (LOAD_CHART_HEIGHT - 16);
+              return (
+                <line
+                  key={level}
+                  x1="8"
+                  x2={LOAD_CHART_WIDTH - 8}
+                  y1={y}
+                  y2={y}
+                  stroke="rgba(148, 163, 184, 0.14)"
+                  strokeDasharray="3 5"
+                />
+              );
+            })}
+
+            <path d={loadAreaPath} fill="url(#loadAreaGradient)" />
+            <path
+              d={loadLinePath}
+              fill="none"
+              stroke="url(#loadLineGradient)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-2.5 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-zinc-500">
+              Current
+            </p>
+            <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-100">
+              {currentLoad}%
+            </p>
+          </div>
+          <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-2.5 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-zinc-500">
+              Average
+            </p>
+            <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-100">
+              {avgLoad}%
+            </p>
+          </div>
+          <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-2.5 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-zinc-500">
+              Peak
+            </p>
+            <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-100">
+              {peakLoad}%
+            </p>
+          </div>
         </div>
       </div>
     </section>
