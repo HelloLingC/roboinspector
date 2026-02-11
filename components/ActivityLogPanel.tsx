@@ -2,11 +2,13 @@
 
 import { useRef } from "react";
 import { ActivityLogEntry } from "@/types/robot";
+import { useActivityLogSSE } from "@/lib/useActivityLogSSE";
 
 type ActivityLogPanelProps = {
   entries: ActivityLogEntry[];
-  setEntries: (entries: ActivityLogEntry[]) => void;
+  setEntries: React.Dispatch<React.SetStateAction<ActivityLogEntry[]>>;
   maxItems?: number;
+  sseUrl?: string;
 };
 
 const levelToColor: Record<ActivityLogEntry["level"], string> = {
@@ -15,22 +17,16 @@ const levelToColor: Record<ActivityLogEntry["level"], string> = {
   error: "bg-rose-500/20 text-rose-200 border-rose-500/30",
 };
 
-function relativeTime(ts: number) {
-  const diffMs = Date.now() - ts;
-  const seconds = Math.max(0, Math.floor(diffMs / 1000));
-  if (seconds < 1) return "just now";
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+function formatTime(ts: number) {
+  const date = new Date(ts);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-export function ActivityLogPanel({ entries, setEntries, maxItems = 20 }: ActivityLogPanelProps) {
+export function ActivityLogPanel({ entries, setEntries, maxItems = 20, sseUrl }: ActivityLogPanelProps) {
   const visibleEntries = entries.slice(0, maxItems);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useActivityLogSSE(entries, setEntries, { url: sseUrl, maxItems });
 
   const handleExport = () => {
     const json = JSON.stringify(entries, null, 2);
@@ -114,7 +110,7 @@ export function ActivityLogPanel({ entries, setEntries, maxItems = 20 }: Activit
                   <p className="text-xs text-zinc-400">{entry.detail}</p>
                 )}
               </div>
-              <span className="text-xs text-zinc-500">{relativeTime(entry.ts)}</span>
+              <span className="text-xs text-zinc-500">{formatTime(entry.ts)}</span>
             </li>
           ))
         ) : (

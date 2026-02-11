@@ -71,7 +71,7 @@ export class RobotWebSocketClient {
     socket.onclose = () => {
       this.emitStatus(
         "disconnected",
-        "WebSocket disconnected. Commands will use HTTP fallback; check the WS server.",
+        "WebSocket disconnected. Commands will use HTTP fallback",
       );
       this.emitLog({
         ts: Date.now(),

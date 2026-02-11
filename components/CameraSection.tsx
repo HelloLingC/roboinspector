@@ -20,7 +20,7 @@ export function CameraSection({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-zinc-400">Live Stream</p>
-          <h2 className="text-lg font-semibold">Camera</h2>
+          <h2 className="text-lg font-semibold">摄像头</h2>
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-400">
           <span>MJPEG:</span>
@@ -29,9 +29,6 @@ export function CameraSection({
       </div>
       <div className="mt-3 flex justify-center">
         <div className="relative aspect-[4/3] w-full max-w-md overflow-hidden rounded-xl border border-zinc-800 bg-black">
-          <video autoPlay muted loop playsInline suppressHydrationWarning>
-            <source src="demo.mp4" type="video/mp4" />
-          </video>
           <img
             ref={imgRef}
             src={mjpegUrl}
