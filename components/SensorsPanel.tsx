@@ -133,6 +133,13 @@ function buildAreaPath(
   return `${linePath} L ${lastX.toFixed(2)} ${baseY.toFixed(2)} L ${inset.toFixed(2)} ${baseY.toFixed(2)} Z`;
 }
 
+function buildVerticalGridXs(width: number, inset: number, divisions: number) {
+  const innerWidth = width - inset * 2;
+  return Array.from({ length: divisions - 1 }, (_, index) => {
+    return inset + ((index + 1) / divisions) * innerWidth;
+  });
+}
+
 function getFreshness(seconds: number | null) {
   if (seconds === null) {
     return {
@@ -238,6 +245,7 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
     LOAD_CHART_WIDTH,
     LOAD_CHART_HEIGHT,
   );
+  const verticalGridXs = buildVerticalGridXs(LOAD_CHART_WIDTH, 8, 8);
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900/90 via-zinc-900/70 to-zinc-950/85 p-4 shadow-xl shadow-black/30 backdrop-blur">
@@ -343,11 +351,24 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
                   x2={LOAD_CHART_WIDTH - 8}
                   y1={y}
                   y2={y}
-                  stroke="rgba(148, 163, 184, 0.14)"
-                  strokeDasharray="3 5"
+                  stroke="rgba(148, 163, 184, 0.34)"
+                  strokeWidth="1.2"
+                  strokeDasharray="4 4"
                 />
               );
             })}
+            {verticalGridXs.map((x) => (
+              <line
+                key={`vertical-${x}`}
+                x1={x}
+                x2={x}
+                y1="8"
+                y2={LOAD_CHART_HEIGHT - 8}
+                stroke="rgba(148, 163, 184, 0.24)"
+                strokeWidth="1"
+                strokeDasharray="4 5"
+              />
+            ))}
 
             <path d={loadAreaPath} fill="url(#loadAreaGradient)" />
             <path
