@@ -21,7 +21,7 @@ const DETECT_URL =
   process.env.NEXT_PUBLIC_DETECT_URL ?? "http://localhost:5000/detect";
 const AUTH_SESSION_STORAGE_KEY = "roboinspector:dashboard-auth";
 const DEMO_ACCESS_CODE =
-  process.env.NEXT_PUBLIC_DASHBOARD_PASSCODE ?? "ROBO-ACCESS";
+  process.env.NEXT_PUBLIC_DASHBOARD_PASSCODE ?? "123456";
 
 export default function Home() {
   const [telemetry, setTelemetry] = useState<Telemetry>({});
