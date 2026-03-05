@@ -11,8 +11,8 @@ import {
 } from "@react-three/drei";
 
 const MODEL_PATH = "/models/meshy-mobile-robotic-camera.glb";
+const ENV_HDR_PATH = "/hdr/potsdamer_platz_1k.hdr";
 const HUD_METRICS = [
-  { label: "CORE TEMP", value: "47.8°C", level: 68 },
   { label: "SERVO LOAD", value: "63%", level: 63 },
   { label: "LINK LAT", value: "22ms", level: 82 },
   { label: "TRACK CONF", value: "98.4%", level: 98 },
@@ -78,7 +78,7 @@ export function ShowcaseSection() {
                 <Bounds fit clip observe margin={1.2}>
                   <RobotModel />
                 </Bounds>
-                <Environment preset="city" />
+                <Environment files={ENV_HDR_PATH} />
               </Suspense>
               <OrbitControls
                 autoRotate
