@@ -19,7 +19,7 @@ export function CameraSection({
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Live Stream</p>
+          <p className="text-sm text-zinc-400">实时视频流</p>
           <h2 className="text-lg font-semibold">摄像头</h2>
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-400">
@@ -32,7 +32,7 @@ export function CameraSection({
           <img
             ref={imgRef}
             src={mjpegUrl}
-            alt="Robot camera feed"
+            alt="机器人摄像头画面"
             className="h-full w-full object-cover"
             crossOrigin="anonymous"
             onLoad={onImageLoad}
@@ -42,7 +42,7 @@ export function CameraSection({
       <div className="mt-3 flex items-center gap-3">
         {!canDetect && (
           <p className="text-xs text-amber-300">
-            Set NEXT_PUBLIC_DETECT_URL to enable detection.
+            请设置 NEXT_PUBLIC_DETECT_URL 以启用检测功能。
           </p>
         )}
       </div>

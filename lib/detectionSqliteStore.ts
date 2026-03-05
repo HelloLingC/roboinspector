@@ -4,54 +4,38 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import type { DetectionPersonRecord, DetectionRecord } from "@/types/robot";
+import type { StreamPersonDetectionRecord } from "@/types/robot";
 
-const DEFAULT_DB_PATH = path.join(process.cwd(), "db", "detections.sqlite");
+const DEFAULT_DB_PATH = path.join(process.cwd(), "..", "agent", "detections.db");
 const SQLITE_DB_PATH = process.env.SQLITE_DB_PATH ?? DEFAULT_DB_PATH;
-const DEFAULT_LIMIT = 100;
+const DEFAULT_LIMIT = 50;
 
 const CREATE_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS detections (
+CREATE TABLE IF NOT EXISTS person_detections (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  total_count INTEGER NOT NULL,
-  frame_width INTEGER,
-  frame_height INTEGER,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS detection_persons (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  detection_id INTEGER NOT NULL REFERENCES detections(id) ON DELETE CASCADE,
+  detected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  stream_url TEXT NOT NULL,
   track_id INTEGER,
   confidence REAL NOT NULL,
-  bbox_x1 REAL NOT NULL,
-  bbox_y1 REAL NOT NULL,
-  bbox_x2 REAL NOT NULL,
-  bbox_y2 REAL NOT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  x1 INTEGER NOT NULL,
+  y1 INTEGER NOT NULL,
+  x2 INTEGER NOT NULL,
+  y2 INTEGER NOT NULL,
+  crop_jpeg BLOB NOT NULL
 );
 `;
 
-type DetectionRow = {
+type StreamPersonDetectionRow = {
   id: number;
-  timestamp: string;
-  total_count: number;
-  frame_width: number | null;
-  frame_height: number | null;
-  created_at: string;
-};
-
-type DetectionPersonRow = {
-  id: number;
-  detection_id: number;
+  detected_at: string;
+  stream_url: string;
   track_id: number | null;
   confidence: number;
-  bbox_x1: number;
-  bbox_y1: number;
-  bbox_x2: number;
-  bbox_y2: number;
-  created_at: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  crop_jpeg: Uint8Array;
 };
 
 function ensureDatabaseDirectory() {
@@ -61,33 +45,24 @@ function ensureDatabaseDirectory() {
   }
 }
 
-function mapDetectionRow(row: DetectionRow): DetectionRecord {
-  return {
-    id: row.id,
-    timestamp: row.timestamp,
-    totalCount: row.total_count,
-    frameWidth: row.frame_width,
-    frameHeight: row.frame_height,
-    createdAt: row.created_at,
-    persons: [],
-  };
-}
+function mapRow(row: StreamPersonDetectionRow): StreamPersonDetectionRecord {
+  const base64 = Buffer.from(row.crop_jpeg).toString("base64");
 
-function mapPersonRow(row: DetectionPersonRow): DetectionPersonRecord {
   return {
     id: row.id,
-    detectionId: row.detection_id,
+    detectedAt: row.detected_at,
+    streamUrl: row.stream_url,
     trackId: row.track_id,
     confidence: row.confidence,
-    bboxX1: row.bbox_x1,
-    bboxY1: row.bbox_y1,
-    bboxX2: row.bbox_x2,
-    bboxY2: row.bbox_y2,
-    createdAt: row.created_at,
+    bboxX1: row.x1,
+    bboxY1: row.y1,
+    bboxX2: row.x2,
+    bboxY2: row.y2,
+    cropDataUrl: `data:image/jpeg;base64,${base64}`,
   };
 }
 
-export function getDetectionsWithPersons(limit = DEFAULT_LIMIT): DetectionRecord[] {
+export function getStreamPersonDetections(limit = DEFAULT_LIMIT): StreamPersonDetectionRecord[] {
   ensureDatabaseDirectory();
   const db = new DatabaseSync(SQLITE_DB_PATH);
 
@@ -95,42 +70,16 @@ export function getDetectionsWithPersons(limit = DEFAULT_LIMIT): DetectionRecord
     db.exec(CREATE_SCHEMA_SQL);
     const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.floor(limit)) : DEFAULT_LIMIT;
 
-    const detectionRows = db
+    const rows = db
       .prepare(
-        `SELECT id, timestamp, total_count, frame_width, frame_height, created_at
-         FROM detections
-         ORDER BY timestamp DESC, id DESC
+        `SELECT id, detected_at, stream_url, track_id, confidence, x1, y1, x2, y2, crop_jpeg
+         FROM person_detections
+         ORDER BY detected_at DESC, id DESC
          LIMIT ?`
       )
-      .all(normalizedLimit) as DetectionRow[];
+      .all(normalizedLimit) as StreamPersonDetectionRow[];
 
-    if (detectionRows.length === 0) {
-      return [];
-    }
-
-    const detections = detectionRows.map(mapDetectionRow);
-    const detectionIds = detections.map((item) => item.id);
-    const detectionsById = new Map(detections.map((item) => [item.id, item]));
-    const placeholders = detectionIds.map(() => "?").join(", ");
-
-    const personRows = db
-      .prepare(
-        `SELECT id, detection_id, track_id, confidence, bbox_x1, bbox_y1, bbox_x2, bbox_y2, created_at
-         FROM detection_persons
-         WHERE detection_id IN (${placeholders})
-         ORDER BY detection_id DESC, id DESC`
-      )
-      .all(...detectionIds) as DetectionPersonRow[];
-
-    for (const row of personRows) {
-      const detection = detectionsById.get(row.detection_id);
-      if (!detection) {
-        continue;
-      }
-      detection.persons.push(mapPersonRow(row));
-    }
-
-    return detections;
+    return rows.map(mapRow);
   } finally {
     db.close();
   }

@@ -20,7 +20,7 @@ export function AuthenticationDialog({
   open,
   isSubmitting = false,
   errorMessage,
-  helperText = "Enter the shared secret from the field kit manifest.",
+  helperText = "请输入现场工具包清单中的共享密钥。",
   expectedCodeHint,
   onSubmit,
 }: AuthenticationDialogProps) {
@@ -40,7 +40,7 @@ export function AuthenticationDialog({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/80 px-6 backdrop-blur">
       <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900/90 p-8 shadow-2xl">
         <div className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-emerald-400">Access Required</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-emerald-400">需要访问授权</p>
           <h1 className="text-2xl font-semibold">身份验证</h1>
           <p className="text-sm text-zinc-400">{helperText}</p>
         </div>
@@ -74,7 +74,7 @@ export function AuthenticationDialog({
               minLength={4}
             />
             {expectedCodeHint ? (
-              <p className="text-xs text-zinc-500">Demo code: {expectedCodeHint}</p>
+              <p className="text-xs text-zinc-500">演示访问码：{expectedCodeHint}</p>
             ) : null}
           </div>
           {errorMessage ? (

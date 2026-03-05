@@ -63,12 +63,12 @@ export default function Home() {
           scope: "session",
           level: "success",
           title: "仪表盘验证通过",
-          detail: email ? `Authenticated as ${email}` : "Authenticated as guest",
+          detail: email ? `已认证账号：${email}` : "已以访客身份认证",
         });
         setAuthSubmitting(false);
         return;
       }
-      setAuthError(`Code mismatch. Use "${DEMO_ACCESS_CODE}" for this demo.`);
+      setAuthError(`访问码不匹配。演示环境请使用“${DEMO_ACCESS_CODE}”。`);
       setAuthSubmitting(false);
     },
     [pushLog],
