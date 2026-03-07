@@ -18,11 +18,11 @@ export function StatusHeader({ wsStatus }: StatusHeaderProps) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-zinc-400">RoboInspector</p>
-          <h1 className="text-2xl font-semibold">Inspection Robot Control</h1>
+          <h1 className="text-2xl font-semibold">巡检机器人控制台</h1>
         </div>
         <div className="flex items-center gap-3 text-sm">
           <span className={`h-2 w-2 rounded-full ${statusToColor[wsStatus]}`} />
-          <span className="text-zinc-300">WS: {wsStatus}</span>
+          <span className="text-zinc-300">连接状态: {wsStatus}</span>
         </div>
       </div>
     </header>

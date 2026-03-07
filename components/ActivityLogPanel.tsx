@@ -31,15 +31,14 @@ export function ActivityLogPanel({ entries, setEntries, maxItems = 20, sseUrl }:
     <section className="h-full rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Automation trail</p>
-          <h2 className="text-lg font-semibold">Activity Log</h2>
-          <p className="text-xs text-zinc-500">Detections & session status</p>
+          <p className="text-sm text-zinc-400">自动化轨迹</p>
+          <h2 className="text-lg font-semibold">活动日志</h2>
         </div>
         <Link
           href="/detection"
           className="rounded-lg border border-cyan-400/30 bg-gradient-to-r from-cyan-500/20 via-sky-500/20 to-indigo-500/20 px-3 py-2 text-sm font-medium text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.15),0_8px_24px_-12px_rgba(59,130,246,0.65)] transition hover:from-cyan-400/30 hover:via-sky-400/30 hover:to-indigo-400/30 hover:text-white"
         >
-          View detection records
+          查看检测记录
         </Link>
       </div>
       <ul className="mt-4 space-y-3 text-sm">
@@ -67,7 +66,7 @@ export function ActivityLogPanel({ entries, setEntries, maxItems = 20, sseUrl }:
           ))
         ) : (
           <li className="rounded-xl border border-dashed border-zinc-800/60 bg-zinc-950/20 p-6 text-center text-sm text-zinc-500">
-            Empty activity log...
+            暂无活动日志...
           </li>
         )}
       </ul>

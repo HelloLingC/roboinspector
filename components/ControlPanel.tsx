@@ -26,44 +26,44 @@ const movementStateStyles: Record<
   { label: string; detail: string; badge: string; dot: string }
 > = {
   idle: {
-    label: "Idle",
-    detail: "Awaiting movement command.",
+    label: "空闲",
+    detail: "等待移动指令。",
     badge: "border-zinc-700/70 bg-zinc-800/50 text-zinc-300",
     dot: "bg-zinc-500",
   },
   forward: {
-    label: "Moving forward",
-    detail: "Throttle applied in forward direction.",
+    label: "前进中",
+    detail: "已施加前进方向油门。",
     badge: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
     dot: "bg-emerald-400",
   },
   reverse: {
-    label: "Reversing",
-    detail: "Throttle applied in reverse direction.",
+    label: "后退中",
+    detail: "已施加后退方向油门。",
     badge: "border-amber-500/40 bg-amber-500/10 text-amber-200",
     dot: "bg-amber-400",
   },
   left: {
-    label: "Turning left",
-    detail: "Steering bias is active to the left.",
+    label: "左转中",
+    detail: "转向偏置已切换到左侧。",
     badge: "border-sky-500/40 bg-sky-500/10 text-sky-200",
     dot: "bg-sky-400",
   },
   right: {
-    label: "Turning right",
-    detail: "Steering bias is active to the right.",
+    label: "右转中",
+    detail: "转向偏置已切换到右侧。",
     badge: "border-cyan-500/40 bg-cyan-500/10 text-cyan-200",
     dot: "bg-cyan-400",
   },
   stopped: {
-    label: "Stopped",
-    detail: "Motors are commanded to stop.",
+    label: "已停止",
+    detail: "电机已收到停止指令。",
     badge: "border-rose-500/40 bg-rose-500/10 text-rose-200",
     dot: "bg-rose-400",
   },
   error: {
-    label: "Command failed",
-    detail: "Last movement command did not send successfully.",
+    label: "指令失败",
+    detail: "上一条移动指令发送失败。",
     badge: "border-red-500/40 bg-red-500/10 text-red-200",
     dot: "bg-red-400",
   },
@@ -108,7 +108,7 @@ export function ControlPanel({
       nextMovementState?: MovementState,
     ) => {
       if (!isUnlocked) {
-        setControlFeedback("Authenticate to control the robot.");
+        setControlFeedback("请先完成身份验证后再控制机器人。");
         if (nextMovementState) {
           setMovementState("error");
           setLastMovementCommandAt(Date.now());
@@ -116,7 +116,7 @@ export function ControlPanel({
         return;
       }
       if (!clientRef.current) {
-        setControlFeedback("Send failed: WebSocket client unavailable");
+        setControlFeedback("发送失败：WebSocket 客户端不可用");
         if (nextMovementState) {
           setMovementState("error");
           setLastMovementCommandAt(Date.now());
@@ -126,14 +126,14 @@ export function ControlPanel({
       try {
         const transport = await clientRef.current.send(payload);
         setControlFeedback(
-          transport === "ws" ? "Sent via WebSocket" : "Sent via HTTP fallback",
+          transport === "ws" ? "已通过 WebSocket 发送" : "已通过 HTTP 回退通道发送",
         );
         if (nextMovementState) {
           setMovementState(nextMovementState);
           setLastMovementCommandAt(Date.now());
         }
       } catch (err) {
-        setControlFeedback(`Send failed: ${(err as Error).message}`);
+        setControlFeedback(`发送失败：${(err as Error).message}`);
         if (nextMovementState) {
           setMovementState("error");
           setLastMovementCommandAt(Date.now());
@@ -167,18 +167,18 @@ export function ControlPanel({
 
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Control</p>
-          <h2 className="text-lg font-semibold">Drive</h2>
+          <p className="text-sm text-zinc-400">控制</p>
+          <h2 className="text-lg font-semibold">运动控制</h2>
+          <code className="mt-1 inline-block rounded bg-black/40 px-2 py-1 text-xs text-zinc-400">
+            {WS_URL}
+          </code>
         </div>
-        <code className="rounded bg-black/40 px-2 py-1 text-xs text-zinc-400">
-          {WS_URL}
-        </code>
       </div>
       <div className="mt-3 rounded-xl border border-zinc-800/70 bg-zinc-950/55 p-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
-          Movement status
+          运动状态
         </p>
         <div className="mt-2 flex items-center justify-between gap-2">
           <div
@@ -190,7 +190,7 @@ export function ControlPanel({
           <span className="text-xs text-zinc-500">
             {lastMovementCommandAt
               ? new Date(lastMovementCommandAt).toLocaleTimeString()
-              : "No command yet"}
+              : "暂无指令"}
           </span>
         </div>
         <p className="mt-2 text-xs text-zinc-400">{movementStyle.detail}</p>
@@ -200,44 +200,44 @@ export function ControlPanel({
           onClick={() => handleDrive(1, 0)}
           className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
         >
-          Forw
+          前进
         </button>
         <button
           onClick={() => handleDrive(-1, 0)}
           className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
         >
-          Back
+          后退
         </button>
         <button
           onClick={handleStop}
           className="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-black hover:bg-red-400"
         >
-          Stop
+          停止
         </button>
         <button
           onClick={() => handleDrive(0.5, -1)}
           className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
         >
-          Left
+          左转
         </button>
         <button
           onClick={() => handleDrive(0.5, 1)}
           className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
         >
-          Right
+          右转
         </button>
         <button
           onClick={handlePing}
           className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
         >
-          Ping
+          心跳
         </button>
       </div>
       {controlFeedback && (
-        <p className="mt-3 text-xs text-zinc-400">Status: {controlFeedback}</p>
+        <p className="mt-3 text-xs text-zinc-400">状态：{controlFeedback}</p>
       )}
       {lastMessage && (
-        <p className="mt-1 text-xs text-zinc-500">Last message: {lastMessage}</p>
+        <p className="mt-1 text-xs text-zinc-500">最近消息：{lastMessage}</p>
       )}
     </section>
   );

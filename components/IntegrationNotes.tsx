@@ -5,26 +5,26 @@ export function IntegrationNotes() {
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Integration Notes</p>
-          <h2 className="text-lg font-semibold">Wire up your endpoints</h2>
+          <p className="text-sm text-zinc-400">集成说明</p>
+          <h2 className="text-lg font-semibold">连接你的接口端点</h2>
         </div>
       </div>
       <div className="mt-3 grid gap-3 text-sm text-zinc-200 md:grid-cols-2">
         <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-          <p className="font-medium text-zinc-100">Env variables</p>
+          <p className="font-medium text-zinc-100">环境变量</p>
           <ul className="mt-2 space-y-1 text-zinc-400">
-            <li>`NEXT_PUBLIC_MJPEG_URL` бк MJPEG stream URL from Pi.</li>
-            <li>`NEXT_PUBLIC_PI_WS` бк WebSocket endpoint for control/telemetry.</li>
-            <li>`NEXT_PUBLIC_DETECT_URL` бк Local detector endpoint (optional).</li>
+            <li>`NEXT_PUBLIC_MJPEG_URL` 用于 AI 检测叠加后的 MJPEG 视频流地址。</li>
+            <li>`NEXT_PUBLIC_PI_WS` 用于控制与遥测的 WebSocket 端点。</li>
+            <li>`NEXT_PUBLIC_DETECT_URL` 用于本地检测服务端点（可选）。</li>
           </ul>
         </div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-          <p className="font-medium text-zinc-100">Expected payloads</p>
+          <p className="font-medium text-zinc-100">期望消息格式</p>
           <ul className="mt-2 space-y-1 text-zinc-400">
-            <li>Drive: {"{ type: \"drive\", throttle: -1..1, steer: -1..1 }"}</li>
-            <li>Stop: {"{ type: \"stop\" }"}</li>
-            <li>Telemetry message should include `telemetry` with IMU/FPS fields.</li>
-            <li>Detector returns {"{ boxes: [{x1,y1,x2,y2,label?,confidence?}] }"} normalized 0-1.</li>
+            <li>驱动：{"{ type: \"drive\", throttle: -1..1, steer: -1..1 }"}</li>
+            <li>停止：{"{ type: \"stop\" }"}</li>
+            <li>遥测消息应包含 `telemetry`，并带有 IMU/FPS 字段。</li>
+            <li>检测服务返回 {"{ boxes: [{x1,y1,x2,y2,label?,confidence?}] }"}，坐标已归一化到 0-1。</li>
           </ul>
         </div>
       </div>

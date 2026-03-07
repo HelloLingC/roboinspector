@@ -40,3 +40,16 @@ export type DetectionRecord = {
   createdAt: string;
   persons: DetectionPersonRecord[];
 };
+
+export type StreamPersonDetectionRecord = {
+  id: number;
+  detectedAt: string;
+  streamUrl: string;
+  trackId: number | null;
+  confidence: number;
+  bboxX1: number;
+  bboxY1: number;
+  bboxX2: number;
+  bboxY2: number;
+  cropDataUrl: string;
+};

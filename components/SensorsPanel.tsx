@@ -7,7 +7,7 @@ type SensorsPanelProps = {
   telemetry: Telemetry;
 };
 
-const NO_DATA = "No data";
+const NO_DATA = "无数据";
 const LOAD_HISTORY_POINTS = 32;
 const LOAD_CHART_WIDTH = 420;
 const LOAD_CHART_HEIGHT = 120;
@@ -145,27 +145,27 @@ function getFreshness(seconds: number | null) {
     return {
       badge: "border-zinc-700/70 bg-zinc-800/50 text-zinc-300",
       dot: "bg-zinc-500",
-      label: "No signal",
+      label: "无信号",
     };
   }
   if (seconds <= 2) {
     return {
       badge: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
       dot: "bg-emerald-400",
-      label: "Live",
+      label: "实时",
     };
   }
   if (seconds <= 8) {
     return {
       badge: "border-amber-500/40 bg-amber-500/10 text-amber-200",
       dot: "bg-amber-400",
-      label: "Stale",
+      label: "延迟",
     };
   }
   return {
     badge: "border-rose-500/40 bg-rose-500/10 text-rose-200",
     dot: "bg-rose-400",
-    label: "Offline",
+    label: "离线",
   };
 }
 
@@ -254,12 +254,11 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
       <div className="relative flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-400">
-            Sensors
+            传感器
           </p>
           <h2 className="text-lg font-semibold tracking-tight text-zinc-50">
-            IMU / Status
+            IMU / 状态
           </h2>
-          <p className="text-xs text-zinc-500">Motion and frame diagnostics</p>
         </div>
         <div
           className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium ${freshness.badge}`}
@@ -276,12 +275,12 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
 
       <div className="relative mt-4 space-y-2.5">
         <DataRow
-          label="Acceler"
+          label="加速度"
           value={formatVector(displayTelemetry.imu?.accel)}
         />
-        <DataRow label="Gyro" value={formatVector(displayTelemetry.imu?.gyro)} />
+        <DataRow label="陀螺仪" value={formatVector(displayTelemetry.imu?.gyro)} />
         <DataRow
-          label="Orient"
+          label="姿态"
           value={formatOrientation(displayTelemetry.imu?.orientation)}
         />
       </div>
@@ -297,14 +296,14 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
         </div>
         <div className="rounded-xl border border-zinc-800/70 bg-zinc-950/45 px-3 py-3">
           <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
-            Update
+            更新
           </p>
           <p className="mt-1 text-sm font-medium text-zinc-200">
             {isSimulated
-              ? "Simulated telemetry"
+              ? "模拟遥测"
               : updatedSeconds === null
-                ? "Waiting for telemetry"
-                : "Telemetry active"}
+                ? "等待遥测数据"
+                : "遥测正常"}
           </p>
         </div>
       </div>
@@ -312,7 +311,7 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
       <div className="relative mt-3 overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-sky-500/5 to-zinc-950/50 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] font-medium uppercase tracking-wide text-cyan-200/80">
-            System load simulation
+            系统负载
           </p>
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2 py-0.5">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,0.8)]" />
@@ -327,7 +326,7 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
             viewBox={`0 0 ${LOAD_CHART_WIDTH} ${LOAD_CHART_HEIGHT}`}
             className="h-28 w-full"
             role="img"
-            aria-label="Simulated system load trend"
+            aria-label="模拟系统负载趋势"
           >
             <defs>
               <linearGradient id="loadAreaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -385,7 +384,7 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
         <div className="mt-2 grid grid-cols-3 gap-2">
           <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-2.5 py-2">
             <p className="text-[10px] uppercase tracking-wide text-zinc-500">
-              Current
+              当前
             </p>
             <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-100">
               {currentLoad}%
@@ -393,7 +392,7 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
           </div>
           <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-2.5 py-2">
             <p className="text-[10px] uppercase tracking-wide text-zinc-500">
-              Average
+              平均
             </p>
             <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-100">
               {avgLoad}%
@@ -401,7 +400,7 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
           </div>
           <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-2.5 py-2">
             <p className="text-[10px] uppercase tracking-wide text-zinc-500">
-              Peak
+              峰值
             </p>
             <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-100">
               {peakLoad}%
