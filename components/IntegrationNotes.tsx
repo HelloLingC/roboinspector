@@ -13,7 +13,7 @@ export function IntegrationNotes() {
         <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
           <p className="font-medium text-zinc-100">环境变量</p>
           <ul className="mt-2 space-y-1 text-zinc-400">
-            <li>`NEXT_PUBLIC_MJPEG_URL` 用于树莓派 MJPEG 视频流地址。</li>
+            <li>`NEXT_PUBLIC_MJPEG_URL` 用于 AI 检测叠加后的 MJPEG 视频流地址。</li>
             <li>`NEXT_PUBLIC_PI_WS` 用于控制与遥测的 WebSocket 端点。</li>
             <li>`NEXT_PUBLIC_DETECT_URL` 用于本地检测服务端点（可选）。</li>
           </ul>

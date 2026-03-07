@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CameraSection } from "../components/CameraSection";
+import { CameraSection, type MjpegSourceOption } from "../components/CameraSection";
 import { ControlPanel } from "../components/ControlPanel";
 import { AuthenticationDialog, AuthCredentials } from "../components/AuthenticationDialog";
 import { ActivityLogPanel } from "../components/ActivityLogPanel";
@@ -13,15 +12,17 @@ import {
   Telemetry,
 } from "../types/robot";
 
-const MJPEG_URL =
-  process.env.NEXT_PUBLIC_MJPEG_URL ?? "http://pi.local:8080/stream";
-
-console.log("MJPEG_URL", MJPEG_URL);
-const DETECT_URL =
-  process.env.NEXT_PUBLIC_DETECT_URL ?? "http://localhost:5000/detect";
+const AI_DETECT_MJPEG_URL =
+  process.env.NEXT_PUBLIC_MJPEG_URL ??
+  "http://127.0.0.1:9000/predict/stream/annotated?conf=0.25&quality=75&device=0";
 const AUTH_SESSION_STORAGE_KEY = "roboinspector:dashboard-auth";
 const DEMO_ACCESS_CODE =
   process.env.NEXT_PUBLIC_DASHBOARD_PASSCODE ?? "123456";
+const DEFAULT_MJPEG_SOURCE_ID: MjpegSourceOption["id"] = "pi-lan";
+const MJPEG_SOURCE_OPTIONS: MjpegSourceOption[] = [
+  { id: "pi-lan", label: "pi.lan", url: "http://pi.lan:8080/stream.mjpg" },
+  { id: "ai-detect", label: "AI Detect", url: AI_DETECT_MJPEG_URL },
+];
 
 export default function Home() {
   const [telemetry, setTelemetry] = useState<Telemetry>({});
@@ -30,9 +31,17 @@ export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [activeMjpegSourceId, setActiveMjpegSourceId] =
+    useState<MjpegSourceOption["id"]>(DEFAULT_MJPEG_SOURCE_ID);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  const canDetect = useMemo(() => Boolean(DETECT_URL), []);
+  const activeMjpegSource = useMemo(
+    () =>
+      MJPEG_SOURCE_OPTIONS.find((option) => option.id === activeMjpegSourceId) ??
+      MJPEG_SOURCE_OPTIONS.find((option) => option.id === DEFAULT_MJPEG_SOURCE_ID) ??
+      MJPEG_SOURCE_OPTIONS[0],
+    [activeMjpegSourceId],
+  );
 
   const pushLog = useCallback((entry: Omit<ActivityLogEntry, "id">) => {
     setActivityLog((prev) => {
@@ -106,8 +115,9 @@ export default function Home() {
             onLog={pushLog}
           />
           <CameraSection
-            mjpegUrl={MJPEG_URL}
-            canDetect={canDetect}
+            activeSourceId={activeMjpegSource.id}
+            sourceOptions={MJPEG_SOURCE_OPTIONS}
+            onSourceChange={setActiveMjpegSourceId}
             imgRef={imgRef}
             onImageLoad={() => {
             }}
