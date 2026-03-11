@@ -4,7 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RobotWebSocketClient } from "@/lib/robotWebSocketClient";
 import { ActivityLogEntry, Telemetry } from "@/types/robot";
 
-const WS_URL = process.env.NEXT_PUBLIC_PI_WS ?? "ws://pi.local:9000/ws";
+const WS_URL = process.env.NEXT_PUBLIC_PI_WS ?? "ws://192.168.1.223:5000";
+const DEFAULT_MOVE_SPEED = 50;
+const DEFAULT_TURN_ANGLE = 30;
+const REVERSE_MOVE_SPEED = -40;
+const DIRECTION_KEYS = [
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+] as const;
+
+type DirectionKey = (typeof DIRECTION_KEYS)[number];
 
 type ControlPanelProps = {
   isUnlocked: boolean;
@@ -69,6 +80,21 @@ const movementStateStyles: Record<
   },
 };
 
+function isDirectionKey(key: string): key is DirectionKey {
+  return DIRECTION_KEYS.includes(key as DirectionKey);
+}
+
+function isSpaceKey(event: KeyboardEvent) {
+  return event.code === "Space" || event.key === " " || event.key === "Spacebar";
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tagName = target.tagName;
+  return tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT";
+}
+
 export function ControlPanel({
   isUnlocked,
   onTelemetryChange,
@@ -81,13 +107,51 @@ export function ControlPanel({
     null,
   );
   const clientRef = useRef<RobotWebSocketClient | null>(null);
+  const pressedDirectionsRef = useRef<DirectionKey[]>([]);
+  const activeDirectionRef = useRef<DirectionKey | null>(null);
+  const isSpacePressedRef = useRef(false);
 
   useEffect(() => {
     if (!isUnlocked) return;
     const client = new RobotWebSocketClient({
       wsUrl: WS_URL,
       handlers: {
-        onMessage: (message) => setLastMessage(message),
+        onMessage: (message) => {
+          setLastMessage(message);
+          try {
+            const parsed = JSON.parse(message) as {
+              type?: string;
+              message?: string;
+              status?: string;
+            };
+            if (parsed.type === "connected") {
+              setControlFeedback(parsed.message ?? "WebSocket 连接成功");
+              return;
+            }
+            if (parsed.type === "move_ack" && parsed.status === "success") {
+              setControlFeedback("移动指令已确认");
+              return;
+            }
+            if (parsed.type === "start_ack" && parsed.status === "success") {
+              setControlFeedback("启动指令已确认");
+              return;
+            }
+            if (parsed.type === "stop_ack" && parsed.status === "success") {
+              setControlFeedback("停止指令已确认");
+              setMovementState("stopped");
+              setLastMovementCommandAt(Date.now());
+              return;
+            }
+            if (parsed.type === "error") {
+              const errorMessage = parsed.message ?? "未知控制错误";
+              setControlFeedback(`控制错误：${errorMessage}`);
+              setMovementState("error");
+              setLastMovementCommandAt(Date.now());
+            }
+          } catch {
+            // Ignore non-JSON server messages.
+          }
+        },
         onTelemetry: (nextTelemetry) => onTelemetryChange(nextTelemetry),
         onLog,
       },
@@ -143,25 +207,166 @@ export function ControlPanel({
     [isUnlocked],
   );
 
-  const handleDrive = (throttle: number, steer: number) => {
-    let nextState: MovementState = "forward";
-    if (throttle < 0) {
-      nextState = "reverse";
-    } else if (steer < 0) {
-      nextState = "left";
-    } else if (steer > 0) {
-      nextState = "right";
-    }
-    sendCommand({ type: "drive", throttle, steer }, nextState);
-  };
+  const handleDrive = useCallback(
+    (throttle: number, steer: number) => {
+      let nextState: MovementState = "forward";
+      let moveSpeed = DEFAULT_MOVE_SPEED;
+      let turnAngle = 0;
 
-  const handleStop = () => {
+      if (throttle < 0) {
+        nextState = "reverse";
+        moveSpeed = REVERSE_MOVE_SPEED;
+      } else if (steer < 0) {
+        nextState = "left";
+        turnAngle = -DEFAULT_TURN_ANGLE;
+      } else if (steer > 0) {
+        nextState = "right";
+        turnAngle = DEFAULT_TURN_ANGLE;
+      }
+
+      void (async () => {
+        await sendCommand({ type: "start" });
+        await sendCommand(
+          {
+            type: "move",
+            turn_angle: turnAngle,
+            left_speed: moveSpeed,
+            right_speed: moveSpeed,
+          },
+          nextState,
+        );
+      })();
+    },
+    [sendCommand],
+  );
+
+  const handleStop = useCallback(() => {
     sendCommand({ type: "stop" }, "stopped");
-  };
+  }, [sendCommand]);
 
-  const handlePing = () => {
-    sendCommand({ type: "ping" });
-  };
+  const handleStart = useCallback(() => {
+    sendCommand({ type: "start" }, "idle");
+  }, [sendCommand]);
+
+  const applyDirectionFromKeyboard = useCallback(
+    (nextDirection: DirectionKey | null) => {
+      if (nextDirection === activeDirectionRef.current) {
+        return;
+      }
+      activeDirectionRef.current = nextDirection;
+      if (!nextDirection) {
+        handleStop();
+        return;
+      }
+
+      if (nextDirection === "ArrowUp") {
+        handleDrive(1, 0);
+        return;
+      }
+      if (nextDirection === "ArrowDown") {
+        handleDrive(-1, 0);
+        return;
+      }
+      if (nextDirection === "ArrowLeft") {
+        handleDrive(0.5, -1);
+        return;
+      }
+      handleDrive(0.5, 1);
+    },
+    [handleDrive, handleStop],
+  );
+
+  useEffect(() => {
+    if (!isUnlocked) return;
+
+    const clearKeyboardState = () => {
+      pressedDirectionsRef.current = [];
+      activeDirectionRef.current = null;
+      isSpacePressedRef.current = false;
+    };
+
+    const forceStopAndClear = () => {
+      const wasDriving =
+        activeDirectionRef.current !== null || pressedDirectionsRef.current.length > 0;
+      clearKeyboardState();
+      if (wasDriving) {
+        handleStop();
+      }
+    };
+
+    const resolveDirection = () => {
+      const nextDirection =
+        pressedDirectionsRef.current[pressedDirectionsRef.current.length - 1] ?? null;
+      applyDirectionFromKeyboard(nextDirection);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const directionKey = isDirectionKey(event.key) ? event.key : null;
+      const spaceKey = isSpaceKey(event);
+      if (!directionKey && !spaceKey) return;
+      if (isEditableTarget(event.target)) return;
+
+      event.preventDefault();
+      if (event.repeat) return;
+
+      if (spaceKey) {
+        if (isSpacePressedRef.current) return;
+        isSpacePressedRef.current = true;
+        pressedDirectionsRef.current = [];
+        activeDirectionRef.current = null;
+        handleStop();
+        return;
+      }
+      if (!directionKey) return;
+
+      isSpacePressedRef.current = false;
+      pressedDirectionsRef.current = [
+        ...pressedDirectionsRef.current.filter((key) => key !== directionKey),
+        directionKey,
+      ];
+      resolveDirection();
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      const directionKey = isDirectionKey(event.key) ? event.key : null;
+      const spaceKey = isSpaceKey(event);
+      if (!directionKey && !spaceKey) return;
+
+      if (spaceKey) {
+        isSpacePressedRef.current = false;
+        return;
+      }
+      if (!directionKey) return;
+
+      pressedDirectionsRef.current = pressedDirectionsRef.current.filter(
+        (key) => key !== directionKey,
+      );
+      resolveDirection();
+    };
+
+    const onWindowBlur = () => {
+      forceStopAndClear();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        forceStopAndClear();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onWindowBlur);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onWindowBlur);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      forceStopAndClear();
+    };
+  }, [applyDirectionFromKeyboard, handleStop, isUnlocked]);
 
   const movementStyle = movementStateStyles[movementState];
 
@@ -227,12 +432,15 @@ export function ControlPanel({
           右转
         </button>
         <button
-          onClick={handlePing}
+          onClick={handleStart}
           className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
         >
-          心跳
+          启动
         </button>
       </div>
+      <p className="mt-2 text-xs text-zinc-400">
+        键盘：↑↓←→ 控制方向，Space 紧急停止。
+      </p>
       {controlFeedback && (
         <p className="mt-3 text-xs text-zinc-400">状态：{controlFeedback}</p>
       )}

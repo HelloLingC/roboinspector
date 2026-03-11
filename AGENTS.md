@@ -8,10 +8,10 @@
 - `.env` carries `NEXT_PUBLIC_MJPEG_URL`, `NEXT_PUBLIC_PI_WS`, `NEXT_PUBLIC_DETECT_URL`, and `DATABASE_URL`; `public/` stores static assets while `.next/` is disposable build output.
 
 ## Build, Test, and Development Commands
-- `npm run dev` starts the Next 16 dev server with hot reload; it expects the `NEXT_PUBLIC_*` URLs and database string to be defined.
-- `npm run build` performs the production bundle, full type-check, and route analysis; treat it as the release gate.
-- `npm run start` serves the built app from `.next/` and mirrors how deployments behave.
-- `npm run lint` executes `eslint-config-next` (Core Web Vitals + TypeScript) and is the current CI signal.
+- `pnpm run dev` starts the Next 16 dev server with hot reload; it expects the `NEXT_PUBLIC_*` URLs and database string to be defined.
+- `pnpm run build` performs the production bundle, full type-check, and route analysis; treat it as the release gate.
+- `pnpm run start` serves the built app from `.next/` and mirrors how deployments behave.
+- `pnpm run lint` executes `eslint-config-next` (Core Web Vitals + TypeScript) and is the current CI signal.
 - `npx drizzle-kit push:pg` (reads `drizzle.config.js`) syncs `db/schema.js` to the Postgres instance pointed at by `DATABASE_URL`.
 
 ## Coding Style & Naming Conventions

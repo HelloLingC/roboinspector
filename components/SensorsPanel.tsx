@@ -275,12 +275,12 @@ export function SensorsPanel({ telemetry }: SensorsPanelProps) {
 
       <div className="relative mt-4 space-y-2.5">
         <DataRow
-          label="加速度"
+          label="ACC"
           value={formatVector(displayTelemetry.imu?.accel)}
         />
-        <DataRow label="陀螺仪" value={formatVector(displayTelemetry.imu?.gyro)} />
+        <DataRow label="GYRO" value={formatVector(displayTelemetry.imu?.gyro)} />
         <DataRow
-          label="姿态"
+          label="ORI"
           value={formatOrientation(displayTelemetry.imu?.orientation)}
         />
       </div>

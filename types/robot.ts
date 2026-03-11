@@ -8,6 +8,8 @@ export type Telemetry = {
   fps?: number;
 };
 
+export type WsStatus = "connected" | "connecting" | "disconnected";
+
 export type ActivityScope = "detection" | "session" | "system";
 
 export type ActivityLogEntry = {

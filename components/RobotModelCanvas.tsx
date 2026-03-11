@@ -1,7 +1,14 @@
 "use client";
 
 import { Suspense } from "react";
-import { Bounds, Environment, Html, OrbitControls, useGLTF } from "@react-three/drei";
+import {
+  Bounds,
+  Environment,
+  Html,
+  OrbitControls,
+  useEnvironment,
+  useGLTF,
+} from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 
 const MODEL_PATH = "/Meshy_AI_Mobile_Robotic_Camera_0305013059_texture.glb";
@@ -11,6 +18,11 @@ type RobotModelCanvasProps = {
   className?: string;
   fullscreen?: boolean;
 };
+
+export function clearRobotModelResources() {
+  useGLTF.clear(MODEL_PATH);
+  useEnvironment.clear({ files: ENV_HDR_PATH });
+}
 
 function RobotModel() {
   const gltf = useGLTF(MODEL_PATH);

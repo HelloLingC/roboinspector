@@ -14,13 +14,13 @@ import {
 
 const AI_DETECT_MJPEG_URL =
   process.env.NEXT_PUBLIC_MJPEG_URL ??
-  "http://127.0.0.1:9000/predict/stream/annotated?conf=0.25&quality=75&device=0";
+  "http://127.0.0.1:9000/predict/stream/annotated?conf=0.25&quality=60";
 const AUTH_SESSION_STORAGE_KEY = "roboinspector:dashboard-auth";
 const DEMO_ACCESS_CODE =
   process.env.NEXT_PUBLIC_DASHBOARD_PASSCODE ?? "123456";
 const DEFAULT_MJPEG_SOURCE_ID: MjpegSourceOption["id"] = "pi-lan";
 const MJPEG_SOURCE_OPTIONS: MjpegSourceOption[] = [
-  { id: "pi-lan", label: "pi.lan", url: "http://pi.lan:8080/stream.mjpg" },
+  { id: "pi-lan", label: "pi.lan", url: "http://192.168.1.223:8080/stream.mjpg" },
   { id: "ai-detect", label: "AI Detect", url: AI_DETECT_MJPEG_URL },
 ];
 

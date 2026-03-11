@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { RobotModelCanvas } from "@/components/RobotModelCanvas";
+import {
+  clearRobotModelResources,
+  RobotModelCanvas,
+} from "@/components/RobotModelCanvas";
 
 const HUD_METRICS = [
   { label: "SERVO LOAD", value: "63%", level: 63 },
@@ -10,6 +14,16 @@ const HUD_METRICS = [
 ];
 
 export function ShowcaseSection() {
+  const [isModelReleased, setIsModelReleased] = useState(false);
+
+  useEffect(() => {
+    if (!isModelReleased) return;
+    const frameId = window.requestAnimationFrame(() => {
+      clearRobotModelResources();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isModelReleased]);
+
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-lg">
       <div className="flex items-center justify-between">
@@ -17,12 +31,26 @@ export function ShowcaseSection() {
           <p className="text-sm text-zinc-400">3D 展示</p>
           <h2 className="text-lg font-semibold">机器人小车可视化</h2>
         </div>
-        <Link
-          href="/model-viewer"
-          className="rounded-md border border-cyan-500/40 bg-cyan-400/10 px-3 py-1.5 text-sm font-medium text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-300/20"
-        >
-          全屏查看
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={isModelReleased}
+            onClick={() => setIsModelReleased((prev) => !prev)}
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+              isModelReleased
+                ? "border-emerald-400/60 bg-emerald-400/15 text-emerald-100 hover:border-emerald-300/80 hover:bg-emerald-300/20"
+                : "border-amber-500/50 bg-amber-400/10 text-amber-100 hover:border-amber-300/70 hover:bg-amber-300/20"
+            }`}
+          >
+            {isModelReleased ? "恢复3D模型" : "释放3D资源"}
+          </button>
+          <Link
+            href="/model-viewer"
+            className="rounded-md border border-cyan-500/40 bg-cyan-400/10 px-3 py-1.5 text-sm font-medium text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-300/20"
+          >
+            全屏查看
+          </Link>
+        </div>
       </div>
       <div className="mt-3">
         <div className="relative h-[340px] overflow-hidden rounded-xl border border-cyan-900/60 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.16),transparent_42%),radial-gradient(circle_at_78%_88%,rgba(14,165,233,0.2),transparent_38%),linear-gradient(180deg,rgba(9,19,31,1)_0%,rgba(6,14,24,1)_55%,rgba(4,10,18,1)_100%)]">
@@ -51,7 +79,15 @@ export function ShowcaseSection() {
               ))}
             </div>
           </div>
-          <RobotModelCanvas className="relative z-10 h-full w-full" />
+          {isModelReleased ? (
+            <div className="relative z-10 flex h-full w-full items-center justify-center px-6 text-center">
+              <div className="rounded-lg border border-zinc-700/80 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300 backdrop-blur-sm">
+                3D 模型资源已释放，点击“恢复3D模型”重新加载。
+              </div>
+            </div>
+          ) : (
+            <RobotModelCanvas className="relative z-10 h-full w-full" />
+          )}
         </div>
       </div>
       <style jsx>{`
